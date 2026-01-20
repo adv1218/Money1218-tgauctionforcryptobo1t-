@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crypto Auction</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+
+<body>
+  <div class="app">
+    <header class="header">
+      <div class="header-content">
+        <h1 class="logo">⭐ Crypto Auction</h1>
+        <div class="user-info" id="userInfo"></div>
+      </div>
+    </header>
+
+    <main class="main">
+      <div id="loginPage" class="page">
+        <div class="login-card">
+          <h2>Вход</h2>
+          <input type="text" id="usernameInput" placeholder="Имя пользователя" class="input">
+          <button id="loginBtn" class="btn btn-primary">Войти</button>
+        </div>
+      </div>
+
+      <div id="auctionsPage" class="page hidden">
+        <div class="tabs">
+          <button class="tab active" data-tab="active">Активные</button>
+          <button class="tab" data-tab="pending">Предстоящие</button>
+          <button class="tab" data-tab="completed">Завершённые</button>
+        </div>
+        <div id="auctionsList" class="auctions-list"></div>
+      </div>
+
+      <div id="auctionPage" class="page hidden">
+        <button id="backBtn" class="btn btn-back">← Назад</button>
+        <div id="auctionDetail"></div>
+      </div>
+
+      <div id="adminPage" class="page hidden">
+        <h2>Создать аукцион</h2>
+        <form id="createAuctionForm" class="form">
+          <input type="text" name="name" placeholder="Название" class="input" required>
+          <textarea name="description" placeholder="Описание" class="input"></textarea>
+          <input type="number" name="totalItems" placeholder="Количество подарков" class="input" required>
+          <input type="number" name="totalRounds" placeholder="Количество раундов" class="input" required>
+          <input type="number" name="winnersPerRound" placeholder="Победителей в раунде (топ-N)" class="input">
+          <input type="number" name="minBid" placeholder="Минимальная ставка (по умолч. 1)" class="input">
+          <input type="number" name="firstRoundMinutes" placeholder="Первый раунд (минуты, по умолч. 20)" class="input">
+          <input type="number" name="otherRoundMinutes" placeholder="Остальные раунды (минуты, по умолч. 3)"
+            class="input">
+          <input type="datetime-local" name="startAt" class="input" required>
+          <button type="submit" class="btn btn-primary">Создать</button>
+        </form>
+      </div>
+
+      <div id="winsPage" class="page hidden">
+        <h2>🎁 Мои подарки</h2>
+        <div id="winsList" class="wins-list"></div>
+      </div>
+    </main>
+
+    <nav class="nav">
+      <button class="nav-btn active" data-page="auctions">🏆 Аукционы</button>
+      <button class="nav-btn" data-page="wins">🎁 Подарки</button>
+      <button class="nav-btn" data-page="admin">➕ Создать</button>
+    </nav>
+  </div>
+
+  <script src="/js/app.js"></script>
+</body>
+
+</html>

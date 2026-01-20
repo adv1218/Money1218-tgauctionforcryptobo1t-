@@ -1,0 +1,1117 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  /* Telegram-style colors */
+  --tg-bg: #000000;
+  --tg-secondary: #1c1c1e;
+  --tg-hint: #8e8e93;
+  --tg-blue: #0a84ff;
+  --tg-orange: #ff9500;
+  --tg-gold: #ffd60a;
+  --tg-silver: #aeaeb2;
+  --tg-bronze: #d4873f;
+  --tg-red: #ff3b30;
+  --tg-green: #34c759;
+
+  /* Glass effect */
+  --glass-bg: rgba(44, 44, 46, 0.8);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-blur: 20px;
+
+  /* Legacy mappings */
+  --bg-primary: var(--tg-bg);
+  --bg-secondary: var(--tg-secondary);
+  --bg-card: #0f3460;
+  --accent: #e94560;
+  --accent-light: #ff6b6b;
+  --text-primary: #ffffff;
+  --text-secondary: var(--tg-hint);
+  --star-color: var(--tg-gold);
+  --success: var(--tg-green);
+  --warning: var(--tg-orange);
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+  background: var(--tg-bg);
+  color: var(--text-primary);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ===== GLASS COMPONENTS ===== */
+
+.glass-button {
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  transition: all 0.2s ease;
+}
+
+.glass-button:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.glass-card {
+  background: rgba(28, 28, 30, 0.95);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+}
+
+/* ===== SLIDER STYLES ===== */
+
+.bid-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 48px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.bid-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 40px;
+  height: 40px;
+  background: #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  position: relative;
+  z-index: 10;
+}
+
+.bid-slider::-moz-range-thumb {
+  width: 40px;
+  height: 40px;
+  background: #ffffff;
+  border-radius: 50%;
+  border: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+}
+
+.slider-track {
+  background: linear-gradient(to right, #ffd60a 0%, #ff9500 30%, #ff3b30 70%, #ff3b30 100%);
+}
+
+/* Gray track when NOT in top */
+.slider-track.not-in-top {
+  background: rgba(142, 142, 147, 0.4);
+}
+
+.slider-container {
+  position: relative;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-right: 60px;
+}
+
+.slider-track-bg {
+  position: relative;
+  flex: 1;
+  height: 48px;
+  background: var(--tg-secondary);
+  border-radius: 24px;
+  overflow: visible;
+}
+
+.slider-progress {
+  height: 100%;
+  border-radius: 24px;
+}
+
+.slider-thumb {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 40px;
+  height: 40px;
+  background: white;
+  border-radius: 50%;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+  z-index: 15;
+}
+
+.slider-range-input {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 20;
+  margin: 0;
+  padding: 0;
+}
+
+.slider-plus-btn {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 48px;
+  height: 48px;
+  background: var(--tg-secondary);
+  border: none;
+  border-radius: 50%;
+  color: var(--tg-hint);
+  font-size: 24px;
+  cursor: pointer;
+  transition: all 0.2s;
+  z-index: 25;
+}
+
+.slider-plus-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+}
+
+/* Bid badge floating above slider */
+.bid-badge-container {
+  position: relative;
+  height: 60px;
+  margin-bottom: 4px;
+  margin-right: 60px;
+}
+
+.bid-badge {
+  position: absolute;
+  bottom: 0;
+  transform: translateX(-50%);
+  padding: 10px 20px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  transition: left 0.1s ease-out;
+}
+
+.bid-badge.not-in-top {
+  background: var(--tg-secondary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.bid-badge.in-top {
+  background: var(--tg-red);
+  box-shadow: 0 6px 20px rgba(255, 59, 48, 0.5);
+}
+
+.bid-badge-arrow {
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+  width: 12px;
+  height: 12px;
+}
+
+.bid-badge.not-in-top .bid-badge-arrow {
+  background: var(--tg-secondary);
+}
+
+.bid-badge.in-top .bid-badge-arrow {
+  background: var(--tg-red);
+}
+
+.bid-badge-star {
+  width: 20px;
+  height: 20px;
+}
+
+.bid-badge-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.top-indicator {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.top-indicator.active {
+  color: var(--tg-green);
+}
+
+.top-indicator.inactive {
+  color: rgba(142, 142, 147, 0.5);
+}
+
+.top-hint {
+  text-align: center;
+  margin-top: 12px;
+  color: var(--tg-hint);
+  font-size: 0.9rem;
+}
+
+.top-hint-amount {
+  color: var(--tg-orange);
+  font-weight: 500;
+}
+
+/* ===== SPARKLE ANIMATION ===== */
+
+@keyframes sparkle {
+
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.sparkle-particle {
+  animation: sparkle 1.5s ease-in-out infinite;
+}
+
+@keyframes subtle-bounce {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.check-bounce {
+  animation: subtle-bounce 3s ease-in-out infinite;
+}
+
+/* ===== STAT CARDS ===== */
+
+.stat-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 16px 8px;
+  border-radius: 16px;
+  min-height: 80px;
+}
+
+.stat-card-value {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.stat-card-label {
+  font-size: 0.7rem;
+  color: var(--tg-hint);
+  text-align: center;
+  line-height: 1.3;
+}
+
+/* ===== USER ROW (leaderboard item) ===== */
+
+.user-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+}
+
+.user-row-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-rank {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.user-rank.gold {
+  background: var(--tg-gold);
+  color: black;
+}
+
+.user-rank.silver {
+  background: var(--tg-silver);
+  color: black;
+}
+
+.user-rank.bronze {
+  background: var(--tg-bronze);
+  color: black;
+}
+
+.user-rank.normal {
+  color: var(--tg-hint);
+  background: transparent;
+}
+
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ff6b9d, #c644fc);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: white;
+  overflow: hidden;
+}
+
+.user-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.user-name {
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.user-bid {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--tg-hint);
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.user-bid-star {
+  color: var(--tg-orange);
+}
+
+/* ===== APP LAYOUT ===== */
+
+.app {
+  max-width: 600px;
+  margin: 0 auto;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  background: var(--bg-secondary);
+  padding: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logo {
+  font-size: 1.5rem;
+  color: var(--star-color);
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+}
+
+.balance {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg-card);
+  padding: 8px 12px;
+  border-radius: 20px;
+}
+
+.balance-star {
+  color: var(--star-color);
+}
+
+.main {
+  flex: 1;
+  padding: 16px;
+  padding-bottom: 80px;
+}
+
+.page {
+  animation: fadeIn 0.3s ease;
+}
+
+.hidden {
+  display: none !important;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ===== FORMS & INPUTS ===== */
+
+.login-card {
+  background: var(--bg-card);
+  padding: 32px;
+  border-radius: 16px;
+  text-align: center;
+  margin-top: 40px;
+}
+
+.login-card h2 {
+  margin-bottom: 24px;
+}
+
+.input {
+  width: 100%;
+  padding: 14px 16px;
+  border: none;
+  border-radius: 12px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 1rem;
+  margin-bottom: 12px;
+}
+
+.input:focus {
+  outline: 2px solid var(--accent);
+}
+
+.btn {
+  padding: 14px 28px;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent-light));
+  color: white;
+  width: 100%;
+}
+
+.btn-blue {
+  background: var(--tg-blue);
+  color: white;
+  width: 100%;
+  border-radius: 24px;
+  padding: 16px 28px;
+  font-size: 1.05rem;
+  box-shadow: 0 6px 20px rgba(10, 132, 255, 0.3);
+}
+
+.btn-primary:hover,
+.btn-blue:hover {
+  transform: scale(1.02);
+}
+
+.btn-primary:disabled,
+.btn-blue:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-back {
+  background: transparent;
+  color: var(--text-secondary);
+  padding: 8px 0;
+  margin-bottom: 16px;
+}
+
+/* ===== TABS ===== */
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.tab {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  border-radius: 12px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tab.active {
+  background: var(--accent);
+  color: white;
+}
+
+/* ===== AUCTION CARDS (list) ===== */
+
+.auctions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.auction-card {
+  background: var(--bg-card);
+  border-radius: 16px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.auction-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.auction-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.auction-name {
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.auction-status {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-active {
+  background: var(--success);
+}
+
+.status-pending {
+  background: var(--warning);
+}
+
+.status-completed {
+  background: var(--text-secondary);
+}
+
+.auction-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.stat-value {
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+/* ===== AUCTION DETAIL ===== */
+
+.auction-detail-card {
+  background: transparent;
+  border-radius: 16px;
+  overflow: visible;
+}
+
+.auction-detail-header {
+  padding: 48px 24px 32px;
+  text-align: center;
+  position: relative;
+  overflow: visible;
+}
+
+/* Background gradient glow */
+.auction-detail-header::before {
+  content: '';
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 280px;
+  height: 280px;
+  background: radial-gradient(circle, rgba(217, 119, 6, 0.35) 0%, rgba(249, 115, 22, 0.2) 40%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.auction-detail-icon {
+  font-size: 6rem;
+  margin-bottom: 20px;
+  position: relative;
+  z-index: 1;
+}
+
+.auction-detail-name {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-bottom: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.auction-badge {
+  display: inline-block;
+  background: rgba(180, 83, 9, 0.5);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #fbbf24;
+  padding: 8px 20px;
+  border-radius: 24px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+  position: relative;
+  z-index: 1;
+}
+
+.auction-detail-status {
+  display: inline-block;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.auction-detail-body {
+  padding: 0;
+}
+
+/* Info table with glass effect */
+.info-table {
+  width: 100%;
+  margin-bottom: 0;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  font-size: 15px;
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  color: var(--tg-hint);
+  font-size: 15px;
+  flex-shrink: 0;
+  min-width: 110px;
+}
+
+.info-value {
+  font-weight: 500;
+  text-align: right;
+  line-height: 1.4;
+  font-size: 15px;
+  color: white;
+}
+
+.timer {
+  text-align: center;
+  padding: 16px;
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.timer-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.timer-value {
+  font-size: 2rem;
+  font-weight: 700;
+  font-family: 'Courier New', monospace;
+  color: var(--accent);
+}
+
+/* ===== BID SECTION ===== */
+
+.bid-section {
+  margin-top: 20px;
+}
+
+.section-title {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--tg-hint);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+  margin-left: 4px;
+}
+
+.my-bid {
+  background: var(--bg-secondary);
+  padding: 16px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+
+.my-bid-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.my-bid-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.my-bid-rank {
+  font-size: 1rem;
+  color: var(--success);
+}
+
+.bid-input-group {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.bid-input {
+  flex: 1;
+}
+
+/* ===== LEADERBOARD ===== */
+
+.leaderboard {
+  margin-top: 24px;
+}
+
+.leaderboard-title {
+  font-size: 1rem;
+  margin-bottom: 12px;
+  color: var(--text-secondary);
+}
+
+.leaderboard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.leaderboard-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: var(--bg-secondary);
+  border-radius: 12px;
+}
+
+.leaderboard-rank {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.rank-1 {
+  background: gold;
+  color: black;
+}
+
+.rank-2 {
+  background: silver;
+  color: black;
+}
+
+.rank-3 {
+  background: #cd7f32;
+  color: white;
+}
+
+.rank-other {
+  background: var(--bg-card);
+}
+
+.leaderboard-user {
+  flex: 1;
+  font-weight: 500;
+}
+
+.leaderboard-amount {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--star-color);
+  font-weight: 600;
+}
+
+/* ===== FORMS ===== */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+textarea.input {
+  min-height: 100px;
+  resize: vertical;
+}
+
+/* ===== NAVIGATION ===== */
+
+.nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--bg-secondary);
+  display: flex;
+  justify-content: center;
+  padding: 12px;
+  gap: 16px;
+}
+
+.nav-btn {
+  flex: 1;
+  max-width: 150px;
+  padding: 12px;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.nav-btn.active {
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+
+/* ===== MISC ===== */
+
+.empty-state {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-secondary);
+}
+
+.deposit-btn {
+  background: var(--success);
+  color: white;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  margin-left: 8px;
+}
+
+.deposit-btn:hover {
+  opacity: 0.9;
+}
+
+.winners-info {
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.winners-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, var(--success), #2e7d32);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 20px;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.bid-stats {
+  display: flex;
+  justify-content: space-around;
+  background: var(--bg-secondary);
+  padding: 16px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+
+.bid-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.bid-stat-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--star-color);
+}
+
+.bid-stat-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+/* ===== WINS PAGE ===== */
+
+.wins-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.win-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: var(--bg-card);
+  padding: 16px;
+  border-radius: 16px;
+}
+
+.win-icon {
+  font-size: 2.5rem;
+}
+
+.win-info {
+  flex: 1;
+}
+
+.win-number {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.win-details {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+/* ===== FOOTER ACTION (fixed bottom button) ===== */
+
+.footer-action {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 16px;
+  padding-bottom: max(24px, env(safe-area-inset-bottom));
+  background: linear-gradient(to top, black, rgba(0, 0, 0, 0.95), transparent);
+  z-index: 50;
+  display: flex;
+  justify-content: center;
+}
+
+.footer-action .btn-blue {
+  max-width: 600px;
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  line-height: 1.4;
+}
+
+.footer-action .btn-subtitle {
+  font-size: 0.8rem;
+  opacity: 0.8;
+  font-weight: 400;
+}
+
+/* ===== CUSTOM SCROLLBAR ===== */
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
