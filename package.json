@@ -4,6 +4,9 @@
     "description": "Backend auction system for digital gifts - Fastify + Zod + Bull + Socket.io",
     "type": "module",
     "main": "dist/app.js",
+    "engines": {
+        "node": ">=18.0.0"
+    },
     "scripts": {
         "dev": "tsx watch src/app.ts",
         "build": "tsc",
