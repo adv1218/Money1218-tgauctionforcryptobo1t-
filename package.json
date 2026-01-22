@@ -3,14 +3,14 @@
     "version": "2.0.0",
     "description": "Backend auction system for digital gifts - Fastify + Zod + Bull + Socket.io",
     "type": "module",
-    "main": "dist/app.js",
+    "main": "./dist/app.js",
     "engines": {
         "node": ">=18.0.0"
     },
     "scripts": {
         "dev": "tsx watch src/app.ts",
         "build": "tsc",
-        "start": "node dist/app.js",
+        "start": "node ./dist/app.js",
         "test": "vitest",
         "test:load": "tsx tests/load/runner.ts",
         "test:single": "tsx tests/load/runner-single.ts",
