@@ -1,7 +1,8 @@
 # Crypto Auction v2.0
 
 > **🎥 DEMO VIDEO:** [Смотреть демонстрацию работы](https://youtu.be/YNWJzRTDirQ)
-
+ DEMO SITE = https://money1218-tgauctionforcryptobo1t-96hv.onrender.com
+ 
 - **Fastify** 2-3x быстрее
 - **Zod** — строгая валидация всех входных данных
 - **Bull Queue** — надёжная обработка раундов вместо polling
