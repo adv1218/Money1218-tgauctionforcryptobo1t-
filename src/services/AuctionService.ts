@@ -1,6 +1,8 @@
 import mongoose from 'mongoose';
 import { Auction, Round, type IAuction } from '../models/index.js';
 import { config } from '../config/env.js';
+import { scheduleRoundProcessing } from '../jobs/queues.js';
+import { emitAuctionStart } from '../websocket/index.js';
 
 export interface CreateAuctionInput {
     name: string;
@@ -70,7 +72,7 @@ export class AuctionService {
             const now = new Date();
             const firstRoundEnd = new Date(now.getTime() + auction.firstRoundDuration);
 
-            await Round.create(
+            const [firstRound] = await Round.create(
                 [
                     {
                         auctionId: auction._id,
@@ -90,6 +92,19 @@ export class AuctionService {
             await auction.save({ session });
 
             await session.commitTransaction();
+
+            // Schedule first round processing via Bull Queue
+            await scheduleRoundProcessing(firstRound._id.toString(), firstRoundEnd);
+
+            // Emit auction start event for real-time UI update
+            emitAuctionStart(auctionId.toString(), {
+                name: auction.name,
+                roundNumber: 1,
+                endAt: firstRoundEnd,
+            });
+
+            console.log(`Auction started: ${auction.name}`);
+
             return auction;
         } catch (error) {
             await session.abortTransaction();

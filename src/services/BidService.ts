@@ -4,6 +4,8 @@ import { balanceService } from './BalanceService.js';
 import { roundService } from './RoundService.js';
 import { withLock } from '../utils/lock.js';
 import { config } from '../config/env.js';
+import { emitNewBid, emitAntiSnipe, emitLeaderboardUpdate } from '../websocket/index.js';
+import { rescheduleRoundProcessing } from '../jobs/queues.js';
 
 export interface PlaceBidResult {
     bid: IBid;
@@ -16,7 +18,8 @@ export class BidService {
         auctionId: mongoose.Types.ObjectId,
         amount: number
     ): Promise<PlaceBidResult> {
-        return withLock(`auction:${auctionId}`, async () => {
+        // Lock per user+auction (allows concurrent bids from different users)
+        return withLock(`bid:${auctionId}:${userId}`, async () => {
             const session = await mongoose.startSession();
             session.startTransaction();
 
@@ -24,6 +27,11 @@ export class BidService {
                 const auction = await Auction.findById(auctionId).session(session);
                 if (!auction || auction.status !== 'active') {
                     throw new Error('Auction not active');
+                }
+
+                // Check minimum bid
+                if (amount < auction.minBid) {
+                    throw new Error(`Minimum bid is ${auction.minBid}`);
                 }
 
                 const round = await Round.findOne({
@@ -53,7 +61,6 @@ export class BidService {
                 }).session(session);
 
                 let bid: IBid;
-                let freezeAmount: number;
 
                 if (existingBid) {
                     const newAmount = existingBid.amount + amount;
@@ -99,6 +106,49 @@ export class BidService {
 
                 await session.commitTransaction();
 
+                // Emit WebSocket events after successful transaction
+                const totalBids = await Bid.countDocuments({
+                    roundId: round._id,
+                    status: 'active',
+                });
+
+                const rank = await this.getUserBidRank(userId, auctionId);
+
+                // Emit new bid event
+                emitNewBid(auctionId.toString(), {
+                    rank: rank || 0,
+                    amount: bid.amount,
+                    userId: userId.toString(),
+                    totalBids,
+                });
+
+                // Emit anti-snipe event if triggered
+                if (antiSnipingTriggered) {
+                    const updatedRound = await Round.findById(round._id);
+                    if (updatedRound) {
+                        emitAntiSnipe(auctionId.toString(), {
+                            newEndAt: updatedRound.endAt,
+                            extension: config.auction.antiSnipingExtension,
+                        });
+                    }
+                }
+
+                // Emit leaderboard update
+                const leaderboard = await roundService.getRoundLeaderboard(round._id, 10);
+                const userIds = leaderboard.map((l) => l.userId);
+                const users = await User.find({ _id: { $in: userIds } });
+                const userMap = new Map(users.map((u) => [u._id.toString(), u]));
+
+                emitLeaderboardUpdate(
+                    auctionId.toString(),
+                    leaderboard.map((l) => ({
+                        rank: l.rank,
+                        userId: l.userId.toString(),
+                        username: userMap.get(l.userId.toString())?.username || 'Unknown',
+                        amount: l.amount,
+                    }))
+                );
+
                 return { bid, antiSnipingTriggered };
             } catch (error) {
                 await session.abortTransaction();
@@ -134,8 +184,13 @@ export class BidService {
         );
 
         if (isInTop) {
-            round.endAt = new Date(round.endAt.getTime() + config.auction.antiSnipingExtension);
+            const newEndAt = new Date(round.endAt.getTime() + config.auction.antiSnipingExtension);
+            round.endAt = newEndAt;
             await round.save({ session });
+
+            // Reschedule round processing in Bull Queue
+            await rescheduleRoundProcessing(round._id.toString(), newEndAt);
+
             return true;
         }
 
@@ -194,3 +249,4 @@ export class BidService {
 }
 
 export const bidService = new BidService();
+

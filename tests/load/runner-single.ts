@@ -1,8 +1,7 @@
 import mongoose from 'mongoose';
 import { connectDatabase, disconnectDatabase } from '../../src/config/database.js';
-import { auctionService } from '../../src/services/AuctionService.js';
-import { bidService, roundService } from '../../src/services/index.js';
-import { roundProcessor } from '../../src/jobs/roundProcessor.js';
+import { auctionService, roundService, bidService } from '../../src/services/index.js';
+import { initializeQueues, closeQueues } from '../../src/jobs/queues.js';
 import { Bid, User, Auction } from '../../src/models/index.js';
 
 async function sleep(ms: number) {
@@ -14,6 +13,7 @@ async function main() {
     console.log('Each bot places ONE random bid per round (no updates)\n');
 
     await connectDatabase();
+    initializeQueues();
 
     // Create 100 bots
     const bots: mongoose.Types.ObjectId[] = [];
@@ -48,7 +48,9 @@ async function main() {
     console.log('Waiting for auction to start...');
     await sleep(6000);
 
-    roundProcessor.start();
+    // Start the auction manually
+    await auctionService.startAuction(auction._id);
+    console.log('Auction started!\n');
 
     let lastRoundId: string | null = null;
 
@@ -100,8 +102,6 @@ async function main() {
         }, 1000);
     });
 
-    roundProcessor.stop();
-
     console.log('\n=== RESULTS ===\n');
 
     const finalAuction = await Auction.findById(auction._id);
@@ -135,6 +135,7 @@ async function main() {
         console.log('\n❌ Financial integrity: FAILED');
     }
 
+    await closeQueues();
     await disconnectDatabase();
     process.exit(0);
 }

@@ -33,10 +33,11 @@ export class Lock {
 export async function withLock<T>(
     key: string,
     fn: () => Promise<T>,
-    ttlSeconds: number = 30,
-    retries: number = 5,
-    retryDelayMs: number = 500
+    ttlSeconds: number = 120, // Increased from 60 to 120 seconds for long transactions
+    retries: number = 15,     // Increased from 10 to 15
+    retryDelayMs: number = 1500 // Increased from 1000 to 1500ms
 ): Promise<T> {
+
     const lock = new Lock(key, ttlSeconds);
 
     for (let i = 0; i < retries; i++) {

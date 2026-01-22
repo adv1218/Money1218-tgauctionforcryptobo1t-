@@ -1,5 +1,8 @@
 const API_BASE = '/api';
 
+// WebSocket connection
+let socket = null;
+
 const state = {
   user: null,
   auctions: [],
@@ -8,6 +11,97 @@ const state = {
   timerInterval: null,
   refreshInterval: null,
 };
+
+// Initialize WebSocket connection
+function initWebSocket() {
+  if (typeof io === 'undefined') {
+    console.warn('Socket.io not loaded, skipping WebSocket');
+    return;
+  }
+
+  socket = io();
+
+  socket.on('connect', () => {
+    console.log('WebSocket connected');
+  });
+
+  socket.on('disconnect', () => {
+    console.log('WebSocket disconnected');
+  });
+
+  // Auction started - refresh auction list
+  socket.on('auction:start', (data) => {
+    console.log('Auction started:', data);
+    loadAuctions();
+    // If viewing this auction, refresh detail
+    if (state.currentAuction?.id === data.auctionId) {
+      forceRefreshAuctionData();
+    }
+  });
+
+  // Round ended
+  socket.on('round:end', (data) => {
+    console.log('Round ended:', data);
+    if (state.currentAuction?.id === data.auctionId) {
+      forceRefreshAuctionData();
+    }
+  });
+
+  // Round started
+  socket.on('round:start', (data) => {
+    console.log('Round started:', data);
+    if (state.currentAuction?.id === data.auctionId) {
+      forceRefreshAuctionData();
+    }
+  });
+
+  // Auction completed
+  socket.on('auction:complete', (data) => {
+    console.log('Auction completed:', data);
+    loadAuctions();
+    if (state.currentAuction?.id === data.auctionId) {
+      forceRefreshAuctionData();
+    }
+  });
+
+  // New bid
+  socket.on('bid:new', (data) => {
+    console.log('New bid:', data);
+    // Only update leaderboard, don't refresh whole page
+  });
+
+  // Anti-snipe triggered
+  socket.on('timer:antiSnipe', (data) => {
+    console.log('Anti-snipe triggered:', data);
+    if (state.currentAuction?.id === data.auctionId) {
+      // Update timer with new end time
+      if (state.currentAuction.activeRound) {
+        state.currentAuction.activeRound.endAt = data.newEndAt;
+      }
+    }
+  });
+
+  // Leaderboard update
+  socket.on('leaderboard:update', (data) => {
+    console.log('Leaderboard updated:', data);
+  });
+}
+
+// Join auction room for real-time updates
+function joinAuctionRoom(auctionId) {
+  if (socket && socket.connected) {
+    socket.emit('join:auction', auctionId);
+    console.log('Joined auction room:', auctionId);
+  }
+}
+
+// Leave auction room
+function leaveAuctionRoom(auctionId) {
+  if (socket && socket.connected) {
+    socket.emit('leave:auction', auctionId);
+    console.log('Left auction room:', auctionId);
+  }
+}
 
 async function api(endpoint, options = {}) {
   const headers = { 'Content-Type': 'application/json' };
@@ -173,10 +267,18 @@ function getStatusLabel(status) {
 
 async function openAuction(id) {
   try {
+    // Leave previous auction room if any
+    if (state.currentAuction) {
+      leaveAuctionRoom(state.currentAuction.id);
+    }
+
     state.currentAuction = await api(`/auctions/${id}`);
     showPage('auction');
     renderAuctionDetail();
     startAuctionRefresh();
+
+    // Join auction room for real-time updates
+    joinAuctionRoom(id);
   } catch (err) {
     alert(err.message);
   }
@@ -654,6 +756,9 @@ function renderWins(wins) {
 }
 
 function init() {
+  // Initialize WebSocket for real-time updates
+  initWebSocket();
+
   const savedUser = localStorage.getItem('user');
   if (savedUser) {
     state.user = JSON.parse(savedUser);

@@ -3,6 +3,8 @@ import { Round, Bid, Auction, type IRound } from '../models/index.js';
 import { balanceService } from './BalanceService.js';
 import { auctionService } from './AuctionService.js';
 import { withLock } from '../utils/lock.js';
+import { emitRoundEnd, emitRoundStart, emitAuctionComplete } from '../websocket/index.js';
+import { scheduleRoundProcessing } from '../jobs/queues.js';
 
 export class RoundService {
     async getCurrentRound(auctionId: mongoose.Types.ObjectId): Promise<IRound | null> {
@@ -43,121 +45,173 @@ export class RoundService {
         }
     }
 
+    /**
+     * Optimized processRound without transactions for better performance on cloud MongoDB
+     * Uses atomic operations and distributed locking instead
+     */
     async processRound(roundId: mongoose.Types.ObjectId): Promise<void> {
         await withLock(`round:${roundId}`, async () => {
-            const session = await mongoose.startSession();
-            session.startTransaction();
+            console.log(`[RoundService] Starting to process round ${roundId}`);
 
-            try {
-                const round = await Round.findById(roundId).session(session);
-                if (!round || round.status !== 'active') {
-                    await session.abortTransaction();
-                    return;
+            // Atomically set round to 'processing' and get the round
+            const round = await Round.findOneAndUpdate(
+                { _id: roundId, status: 'active' },
+                { $set: { status: 'processing' } },
+                { new: true }
+            );
+
+            if (!round) {
+                console.log(`[RoundService] Round ${roundId} is not active, skipping`);
+                return;
+            }
+
+            console.log(`[RoundService] Round ${roundId} set to processing`);
+
+            const auction = await Auction.findById(round.auctionId);
+            if (!auction) {
+                await Round.updateOne({ _id: roundId }, { $set: { status: 'active' } });
+                return;
+            }
+
+            const auctionId = auction._id.toString();
+
+            // Get bids sorted by amount (highest first), then by time (earliest first)
+            const bids = await Bid.find({
+                roundId: round._id,
+                status: 'active',
+            })
+                .sort({ amount: -1, createdAt: 1 })
+                .lean();
+
+            console.log(`[RoundService] Found ${bids.length} active bids`);
+
+            const winnersCount = Math.min(round.winnersCount, bids.length);
+            let totalSpent = 0;
+            const baseItemNumber = auction.distributedItems + 1;
+
+            // Process winners and losers in parallel for speed
+            const winnerPromises: Promise<void>[] = [];
+            const loserPromises: Promise<void>[] = [];
+
+            for (let i = 0; i < bids.length; i++) {
+                const bid = bids[i];
+
+                if (i < winnersCount) {
+                    totalSpent += bid.amount;
+                    winnerPromises.push(
+                        (async () => {
+                            await Bid.updateOne(
+                                { _id: bid._id },
+                                {
+                                    $set: {
+                                        status: 'won',
+                                        wonInRound: round.roundNumber,
+                                        itemNumber: baseItemNumber + i,
+                                    },
+                                }
+                            );
+                            await balanceService.processWinWithoutSession(
+                                bid.userId,
+                                bid.amount,
+                                bid.auctionId,
+                                bid._id
+                            );
+                        })()
+                    );
+                } else {
+                    loserPromises.push(
+                        (async () => {
+                            await Bid.updateOne(
+                                { _id: bid._id },
+                                { $set: { status: 'refunded' } }
+                            );
+                            await balanceService.refundWithoutSession(
+                                bid.userId,
+                                bid.amount,
+                                bid.auctionId,
+                                bid._id
+                            );
+                        })()
+                    );
                 }
+            }
 
-                round.status = 'processing';
-                await round.save({ session });
+            // Wait for all operations to complete
+            await Promise.all([...winnerPromises, ...loserPromises]);
 
-                const auction = await Auction.findById(round.auctionId).session(session);
-                if (!auction) {
-                    await session.abortTransaction();
-                    return;
+            console.log(`[RoundService] Processed ${winnersCount} winners, ${bids.length - winnersCount} refunds`);
+
+            // Update auction stats
+            await Auction.updateOne(
+                { _id: auction._id },
+                {
+                    $inc: { distributedItems: winnersCount },
+                    $set: {
+                        avgPrice: auction.distributedItems + winnersCount > 0
+                            ? (auction.avgPrice * auction.distributedItems + totalSpent) / (auction.distributedItems + winnersCount)
+                            : 0,
+                    },
                 }
+            );
 
-                const bids = await Bid.find({
-                    roundId: round._id,
+            // Mark round as completed
+            await Round.updateOne({ _id: roundId }, { $set: { status: 'completed' } });
+
+            // Emit round end event
+            emitRoundEnd(auctionId, {
+                roundNumber: round.roundNumber,
+                winnersCount,
+            });
+
+            const remainingItems = auction.totalItems - auction.distributedItems - winnersCount;
+
+            if (remainingItems > 0 && round.roundNumber < auction.totalRounds) {
+                // Create next round
+                const nextRoundNumber = round.roundNumber + 1;
+                const nextRoundDuration = auction.otherRoundDuration;
+                const nextStart = new Date();
+                const nextEnd = new Date(nextStart.getTime() + nextRoundDuration);
+
+                const nextWinnersCount = Math.min(auction.itemsPerRound, remainingItems);
+
+                const newRound = await Round.create({
+                    auctionId: auction._id,
+                    roundNumber: nextRoundNumber,
+                    startAt: nextStart,
+                    endAt: nextEnd,
+                    originalEndAt: nextEnd,
                     status: 'active',
-                })
-                    .sort({ amount: -1, createdAt: 1 })
-                    .session(session);
+                    winnersCount: nextWinnersCount,
+                });
 
-                const winnersCount = Math.min(round.winnersCount, bids.length);
-                let totalSpent = 0;
-                const baseItemNumber = auction.distributedItems + 1;
-
-                for (let i = 0; i < bids.length; i++) {
-                    const bid = bids[i];
-
-                    if (i < winnersCount) {
-                        bid.status = 'won';
-                        bid.wonInRound = round.roundNumber;
-                        bid.itemNumber = baseItemNumber + i;
-                        await bid.save({ session });
-
-                        await balanceService.processWin(
-                            bid.userId,
-                            bid.amount,
-                            bid.auctionId,
-                            bid._id,
-                            session
-                        );
-
-                        totalSpent += bid.amount;
-                    } else {
-                        bid.status = 'refunded';
-                        await bid.save({ session });
-
-                        await balanceService.refund(
-                            bid.userId,
-                            bid.amount,
-                            bid.auctionId,
-                            bid._id,
-                            session
-                        );
-                    }
-                }
-
-                await auctionService.updateStats(
-                    auction._id,
-                    winnersCount,
-                    totalSpent,
-                    session
+                await Auction.updateOne(
+                    { _id: auction._id },
+                    { $set: { currentRound: nextRoundNumber } }
                 );
 
-                round.status = 'completed';
-                await round.save({ session });
+                // Schedule next round processing
+                await scheduleRoundProcessing(newRound._id.toString(), nextEnd);
 
-                const remainingItems = auction.totalItems - auction.distributedItems - winnersCount;
+                // Emit new round start event
+                emitRoundStart(auctionId, {
+                    roundNumber: nextRoundNumber,
+                    endAt: nextEnd,
+                    winnersCount: nextWinnersCount,
+                });
 
-                if (remainingItems > 0 && round.roundNumber < auction.totalRounds) {
-                    const nextRoundNumber = round.roundNumber + 1;
-                    const nextRoundDuration = auction.otherRoundDuration;
-                    const nextStart = new Date();
-                    const nextEnd = new Date(nextStart.getTime() + nextRoundDuration);
+                console.log(`[RoundService] Created next round ${nextRoundNumber}`);
+            } else {
+                // Complete auction
+                await Auction.updateOne(
+                    { _id: auction._id },
+                    { $set: { status: 'completed' } }
+                );
 
-                    const nextWinnersCount = Math.min(
-                        auction.itemsPerRound,
-                        remainingItems
-                    );
-
-                    await Round.create(
-                        [
-                            {
-                                auctionId: auction._id,
-                                roundNumber: nextRoundNumber,
-                                startAt: nextStart,
-                                endAt: nextEnd,
-                                originalEndAt: nextEnd,
-                                status: 'active',
-                                winnersCount: nextWinnersCount,
-                            },
-                        ],
-                        { session }
-                    );
-
-                    auction.currentRound = nextRoundNumber;
-                    await auction.save({ session });
-                } else {
-                    await auctionService.completeAuction(auction._id, session);
-                }
-
-                await session.commitTransaction();
-            } catch (error) {
-                await session.abortTransaction();
-                throw error;
-            } finally {
-                session.endSession();
+                emitAuctionComplete(auctionId);
+                console.log(`[RoundService] Auction completed`);
             }
+
+            console.log(`[RoundService] Round ${roundId} processed successfully`);
         });
     }
 
@@ -208,4 +262,3 @@ export class RoundService {
 }
 
 export const roundService = new RoundService();
-

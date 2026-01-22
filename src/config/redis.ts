@@ -1,8 +1,10 @@
 import Redis from 'ioredis';
+import type { RedisOptions } from 'ioredis';
 import { config } from './env.js';
 
 let redisUrl = config.redisUrl;
 
+// Clean quotes if present
 if (redisUrl.startsWith('"') || redisUrl.startsWith("'")) {
     redisUrl = redisUrl.slice(1);
 }
@@ -12,24 +14,47 @@ if (redisUrl.endsWith('"') || redisUrl.endsWith("'")) {
 
 console.log('Redis URL:', redisUrl.substring(0, 30) + '...');
 
-const options: Record<string, unknown> = {
-    maxRetriesPerRequest: 3,
+const options: RedisOptions = {
+    maxRetriesPerRequest: null, // Don't limit retries for commands
+    enableReadyCheck: true,
     retryStrategy: (times: number) => {
-        if (times > 3) return null;
-        return Math.min(times * 200, 2000);
+        // Always retry with exponential backoff
+        const delay = Math.min(times * 500, 10000);
+        console.log(`Redis reconnecting attempt ${times}, delay ${delay}ms`);
+        return delay;
+    },
+    reconnectOnError: (err: Error) => {
+        // Reconnect on connection errors
+        console.log('Redis reconnecting due to error:', err.message);
+        return true;
     },
 };
 
+// Enable TLS for Redis Cloud (rediss://)
 if (redisUrl.startsWith('rediss://')) {
     options.tls = {};
 }
 
-export const redis = new Redis(redisUrl, options);
+// Create Redis client
+const RedisClient = (Redis as any).default || Redis;
+export const redis = new RedisClient(redisUrl, options);
 
 redis.on('connect', () => {
-    console.log('Connected to Redis');
+    console.log('Redis: connecting...');
 });
 
-redis.on('error', (err) => {
+redis.on('ready', () => {
+    console.log('Redis: ready');
+});
+
+redis.on('close', () => {
+    console.log('Redis: connection closed');
+});
+
+redis.on('error', (err: Error) => {
     console.error('Redis error:', err.message);
+});
+
+redis.on('reconnecting', () => {
+    console.log('Redis: reconnecting...');
 });

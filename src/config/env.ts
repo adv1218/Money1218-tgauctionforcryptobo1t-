@@ -9,8 +9,8 @@ export const config = {
     auction: {
         defaultFirstRoundDuration: 20 * 60 * 1000,
         defaultOtherRoundDuration: 3 * 60 * 1000,
-        antiSnipingExtension: 30 * 1000,
-        antiSnipingThreshold: 3,
-        antiSnipingWindow: 30 * 1000,
+        antiSnipingExtension: 30 * 1000, // Add 30 seconds when anti-sniping triggered
+        antiSnipingThreshold: 3, // Number of times anti-sniping can trigger
+        antiSnipingWindow: 5 * 1000, // Only trigger anti-sniping if bid in last 5 seconds
     },
 };

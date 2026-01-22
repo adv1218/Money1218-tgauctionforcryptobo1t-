@@ -1,14 +1,15 @@
 import mongoose from 'mongoose';
 import { connectDatabase, disconnectDatabase } from '../../src/config/database.js';
-import { auctionService } from '../../src/services/AuctionService.js';
+import { auctionService, roundService } from '../../src/services/index.js';
 import { runBots } from '../../src/jobs/botRunner.js';
-import { roundProcessor } from '../../src/jobs/roundProcessor.js';
-import { Bid, User, Auction } from '../../src/models/index.js';
+import { initializeQueues, closeQueues, scheduleRoundProcessing } from '../../src/jobs/queues.js';
+import { Bid, User, Auction, Round } from '../../src/models/index.js';
 
 async function main() {
     console.log('Starting load test...\n');
 
     await connectDatabase();
+    initializeQueues();
 
     const startDate = new Date(Date.now() + 5000);
 
@@ -25,7 +26,13 @@ async function main() {
     console.log(`Items: ${auction.totalItems}, Rounds: ${auction.totalRounds}`);
     console.log(`Starting at: ${startDate.toISOString()}\n`);
 
-    roundProcessor.start();
+    // Wait for auction to start
+    console.log('Waiting for auction to start...');
+    await new Promise(resolve => setTimeout(resolve, 6000));
+
+    // Start the auction manually
+    await auctionService.startAuction(auction._id);
+    console.log('Auction started!\n');
 
     const botRunner = await runBots({
         count: 10,
@@ -47,7 +54,6 @@ async function main() {
     });
 
     botRunner.stop();
-    roundProcessor.stop();
 
     console.log('\n=== RESULTS ===\n');
 
@@ -78,6 +84,7 @@ async function main() {
         console.log('\n❌ Financial integrity: FAILED');
     }
 
+    await closeQueues();
     await disconnectDatabase();
     process.exit(0);
 }
