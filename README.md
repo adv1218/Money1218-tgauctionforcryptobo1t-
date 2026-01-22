@@ -2,7 +2,7 @@
 
 > **🎥 DEMO VIDEO:** [Смотреть демонстрацию работы](https://youtu.be/YNWJzRTDirQ)
  DEMO SITE = https://money1218-tgauctionforcryptobo1t-96hv.onrender.com
- 
+
 - **Fastify** 2-3x быстрее
 - **Zod** — строгая валидация всех входных данных
 - **Bull Queue** — надёжная обработка раундов вместо polling
@@ -32,8 +32,8 @@ cp .env.example .env
 
 ```env
 PORT=3000
-MONGODB_URI=mongodb+srv://... (Atlas) ИЛИ mongodb://localhost:27017/crypto-auction (Local)
-REDIS_URL=...
+MONGODB_URI=mongodb+srv://asadveot_db_user:Asat1234@cluster0.2mfxhco.mongodb.net/?appName=Cluster0
+REDIS_URL=rediss://default:AX1qAAIncDJlMDJhOTlmODIxNjI0YmE5YWE0MTgyYzBhZTQ2MjU4NHAyMzIxMDY@loyal-skylark-32106.upstash.io:6379
 NODE_ENV=development
 ```
 
