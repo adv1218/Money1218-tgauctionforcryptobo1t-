@@ -691,11 +691,11 @@ async function createAuction(e) {
   const winnersPerRound = parseInt(formData.get('winnersPerRound'), 10);
   const minBid = parseInt(formData.get('minBid'), 10);
 
-  // Check if "Start Now" checkbox is checked
+
   const startNowCheckbox = document.getElementById('startNow');
   const startNow = startNowCheckbox && startNowCheckbox.checked;
 
-  // If startNow, set startAt to 5 seconds from now
+
   let startAt;
   if (startNow) {
     startAt = new Date(Date.now() + 5000).toISOString();
@@ -839,6 +839,19 @@ function setupEventListeners() {
   });
 
   $('#createAuctionForm').addEventListener('submit', createAuction);
+
+  // Toggle date picker visibility based on "Start Now" checkbox
+  const startNowCheckbox = $('#startNow');
+  const startAtWrapper = $('#startAtWrapper');
+  if (startNowCheckbox && startAtWrapper) {
+    startNowCheckbox.addEventListener('change', () => {
+      if (startNowCheckbox.checked) {
+        startAtWrapper.style.display = 'none';
+      } else {
+        startAtWrapper.style.display = 'block';
+      }
+    });
+  }
 }
 
 document.addEventListener('DOMContentLoaded', () => {

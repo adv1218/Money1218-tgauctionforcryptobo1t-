@@ -1,17 +1,26 @@
 /**
  * Concurrent Load Test - 200 simultaneous bids from 200 users
  * Tests system under high concurrent load
+ * 
+ * Run with: npx tsx tests/load/concurrent.ts
+ * Or with custom server: API_BASE=http://your-server/api npx tsx tests/load/concurrent.ts
  */
 
-const API_BASE = process.env.API_BASE || 'http://localhost:3000/api';
+const LOAD_TEST_API_BASE = process.env.API_BASE || 'http://localhost:3000/api';
 
-interface User {
+interface LoadTestUser {
     id: string;
     username: string;
 }
 
-async function api(endpoint: string, options: RequestInit = {}): Promise<any> {
-    const response = await fetch(`${API_BASE}${endpoint}`, {
+interface BidResult {
+    success: number;
+    failed: number;
+    times: number[];
+}
+
+async function loadTestApi(endpoint: string, options: RequestInit = {}): Promise<any> {
+    const response = await fetch(`${LOAD_TEST_API_BASE}${endpoint}`, {
         ...options,
         headers: {
             'Content-Type': 'application/json',
@@ -25,11 +34,10 @@ async function api(endpoint: string, options: RequestInit = {}): Promise<any> {
     return data.data;
 }
 
-async function createUsers(count: number): Promise<User[]> {
+async function createLoadTestUsers(count: number): Promise<LoadTestUser[]> {
     console.log(`Creating ${count} users...`);
-    const users: User[] = [];
+    const users: LoadTestUser[] = [];
 
-    // Create users in batches to avoid overwhelming the server
     const batchSize = 10;
     for (let i = 0; i < count; i += batchSize) {
         const batch = Math.min(batchSize, count - i);
@@ -38,7 +46,7 @@ async function createUsers(count: number): Promise<User[]> {
         for (let j = 0; j < batch; j++) {
             const username = `loadtest_${Date.now()}_${i + j}`;
             promises.push(
-                api('/users/login', {
+                loadTestApi('/users/login', {
                     method: 'POST',
                     body: JSON.stringify({ username }),
                 }).catch(e => {
@@ -56,7 +64,7 @@ async function createUsers(count: number): Promise<User[]> {
     return users;
 }
 
-async function depositToUsers(users: User[]): Promise<void> {
+async function depositToLoadTestUsers(users: LoadTestUser[]): Promise<void> {
     console.log(`Depositing 10000 stars to ${users.length} users...`);
 
     const batchSize = 10;
@@ -66,7 +74,7 @@ async function depositToUsers(users: User[]): Promise<void> {
         const batch = users.slice(i, i + batchSize);
         await Promise.all(
             batch.map(user =>
-                api('/users/me/deposit', {
+                loadTestApi('/users/me/deposit', {
                     method: 'POST',
                     body: JSON.stringify({ amount: 10000 }),
                     headers: { 'X-User-Id': user.id },
@@ -79,18 +87,19 @@ async function depositToUsers(users: User[]): Promise<void> {
     console.log('');
 }
 
-async function createAuction(): Promise<string> {
+async function createLoadTestAuction(): Promise<string> {
     console.log('Creating test auction...');
     const startAt = new Date(Date.now() + 5000); // Start in 5 seconds
 
-    const auction = await api('/auctions', {
+    const auction = await loadTestApi('/auctions', {
         method: 'POST',
         body: JSON.stringify({
-            totalItems: 100, // For 200 users test
+            name: 'Load Test Auction ' + Date.now(),
+            totalItems: 100,
             totalRounds: 10,
             winnersPerRound: 10,
             startAt: startAt.toISOString(),
-            firstRoundDuration: 60000, // 1 minute
+            firstRoundDuration: 60000,
             otherRoundDuration: 30000,
         }),
     });
@@ -100,11 +109,11 @@ async function createAuction(): Promise<string> {
     return auction.id;
 }
 
-async function waitForAuctionStart(auctionId: string): Promise<void> {
+async function waitForLoadTestAuctionStart(auctionId: string): Promise<void> {
     console.log('Waiting for auction to start...');
 
     while (true) {
-        const auction = await api(`/auctions/${auctionId}`);
+        const auction = await loadTestApi(`/auctions/${auctionId}`);
         if (auction.status === 'active') {
             console.log('  Auction is now ACTIVE!');
             return;
@@ -113,41 +122,34 @@ async function waitForAuctionStart(auctionId: string): Promise<void> {
     }
 }
 
-async function placeConcurrentBids(users: User[], auctionId: string): Promise<{
-    success: number;
-    failed: number;
-    times: number[];
-}> {
+async function placeConcurrentBids(users: LoadTestUser[], auctionId: string): Promise<BidResult> {
     console.log(`\n🚀 Placing ${users.length} SIMULTANEOUS bids...`);
 
-    const results = {
+    const results: BidResult = {
         success: 0,
         failed: 0,
-        times: [] as number[],
+        times: [],
     };
 
-    // Generate random bid amounts for each user (100-5000)
-    const bids = users.map((user, i) => ({
+    const bids = users.map((user) => ({
         user,
         amount: 100 + Math.floor(Math.random() * 4900),
     }));
 
     const startTime = Date.now();
 
-    // Fire ALL bids simultaneously
     const promises = bids.map(async ({ user, amount }) => {
         const bidStart = Date.now();
         try {
-            await api(`/auctions/${auctionId}/bid`, {
+            await loadTestApi(`/auctions/${auctionId}/bid`, {
                 method: 'POST',
                 body: JSON.stringify({ amount }),
                 headers: { 'X-User-Id': user.id },
             });
             results.success++;
             results.times.push(Date.now() - bidStart);
-        } catch (e: any) {
+        } catch {
             results.failed++;
-            // Don't log each error, just count
         }
     });
 
@@ -168,11 +170,11 @@ async function placeConcurrentBids(users: User[], auctionId: string): Promise<{
     return results;
 }
 
-async function getStats(auctionId: string): Promise<void> {
+async function getLoadTestStats(auctionId: string): Promise<void> {
     console.log('\n📊 Final Statistics:');
 
-    const auction = await api(`/auctions/${auctionId}`);
-    const leaderboard = await api(`/auctions/${auctionId}/leaderboard?limit=10`);
+    const auction = await loadTestApi(`/auctions/${auctionId}`);
+    const leaderboard = await loadTestApi(`/auctions/${auctionId}/leaderboard?limit=10`);
 
     console.log(`  Total bids in round: ${auction.activeRound?.totalBids || 0}`);
     console.log(`  Min bid for win: ${auction.activeRound?.minBidForWin || 0}`);
@@ -183,34 +185,35 @@ async function getStats(auctionId: string): Promise<void> {
     });
 }
 
-async function main() {
+async function runLoadTest(): Promise<void> {
     console.log('═══════════════════════════════════════════');
     console.log('  CONCURRENT LOAD TEST - 200 Simultaneous Bids');
     console.log('═══════════════════════════════════════════\n');
+    console.log(`  Target: ${LOAD_TEST_API_BASE}\n`);
 
     const USER_COUNT = 200;
 
     try {
         // Step 1: Create users
-        const users = await createUsers(USER_COUNT);
+        const users = await createLoadTestUsers(USER_COUNT);
         if (users.length < USER_COUNT) {
             console.log(`⚠️  Only created ${users.length} users`);
         }
 
         // Step 2: Deposit to users
-        await depositToUsers(users);
+        await depositToLoadTestUsers(users);
 
         // Step 3: Create auction
-        const auctionId = await createAuction();
+        const auctionId = await createLoadTestAuction();
 
         // Step 4: Wait for auction to start
-        await waitForAuctionStart(auctionId);
+        await waitForLoadTestAuctionStart(auctionId);
 
         // Step 5: Place ALL bids simultaneously
         const results = await placeConcurrentBids(users, auctionId);
 
         // Step 6: Get stats
-        await getStats(auctionId);
+        await getLoadTestStats(auctionId);
 
         console.log('\n═══════════════════════════════════════════');
         if (results.success >= USER_COUNT * 0.9) {
@@ -226,4 +229,4 @@ async function main() {
     }
 }
 
-main();
+runLoadTest();

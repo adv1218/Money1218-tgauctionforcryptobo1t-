@@ -54,9 +54,12 @@
             class="input">
           <div class="checkbox-row">
             <input type="checkbox" id="startNow" name="startNow">
-            <label for="startNow">🚀 Запустить сразу</label>
+            <label for="startNow">🚀 Сразу запустить аукцион</label>
           </div>
-          <input type="datetime-local" name="startAt" id="startAtInput" class="input">
+          <div id="startAtWrapper">
+            <input type="datetime-local" name="startAt" id="startAtInput" class="input"
+              placeholder="Дата и время старта">
+          </div>
           <div class="btn-group">
             <button type="submit" class="btn btn-primary">Создать</button>
           </div>
