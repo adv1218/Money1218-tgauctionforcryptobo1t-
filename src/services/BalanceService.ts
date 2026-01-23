@@ -161,71 +161,7 @@ export class BalanceService {
         );
     }
 
-    // Optimized versions without session for performance on cloud MongoDB
-    async processWinWithoutSession(
-        userId: mongoose.Types.ObjectId,
-        amount: number,
-        auctionId: mongoose.Types.ObjectId,
-        bidId: mongoose.Types.ObjectId
-    ): Promise<void> {
-        // Atomically update user balance
-        const result = await User.findOneAndUpdate(
-            { _id: userId, frozenBalance: { $gte: amount } },
-            { $inc: { frozenBalance: -amount } },
-            { new: true }
-        );
 
-        if (!result) {
-            console.warn(`[Balance] processWin failed for user ${userId}: insufficient frozen balance`);
-            return;
-        }
-
-        // Create transaction record (non-blocking)
-        Transaction.create({
-            userId,
-            type: 'win',
-            amount,
-            auctionId,
-            bidId,
-            balanceBefore: result.balance,
-            balanceAfter: result.balance,
-        }).catch(err => console.error('[Balance] Failed to create win transaction:', err));
-    }
-
-    async refundWithoutSession(
-        userId: mongoose.Types.ObjectId,
-        amount: number,
-        auctionId: mongoose.Types.ObjectId,
-        bidId: mongoose.Types.ObjectId
-    ): Promise<void> {
-        // Atomically update user balance
-        const result = await User.findOneAndUpdate(
-            { _id: userId, frozenBalance: { $gte: amount } },
-            {
-                $inc: {
-                    frozenBalance: -amount,
-                    balance: amount
-                }
-            },
-            { new: true }
-        );
-
-        if (!result) {
-            console.warn(`[Balance] refund failed for user ${userId}: insufficient frozen balance`);
-            return;
-        }
-
-        // Create transaction record (non-blocking)
-        Transaction.create({
-            userId,
-            type: 'refund',
-            amount,
-            auctionId,
-            bidId,
-            balanceBefore: result.balance - amount,
-            balanceAfter: result.balance,
-        }).catch(err => console.error('[Balance] Failed to create refund transaction:', err));
-    }
 }
 
 export const balanceService = new BalanceService();
