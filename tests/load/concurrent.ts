@@ -1,10 +1,4 @@
-/**
- * Concurrent Load Test - 200 simultaneous bids from 200 users
- * Tests system under high concurrent load
- * 
- * Run with: npx tsx tests/load/concurrent.ts
- * Or with custom server: API_BASE=http://your-server/api npx tsx tests/load/concurrent.ts
- */
+
 
 const LOAD_TEST_API_BASE = process.env.API_BASE || 'http://localhost:3000/api';
 

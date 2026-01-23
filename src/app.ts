@@ -18,7 +18,7 @@ import { auctionService, roundService } from './services/index.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Extend Fastify types
+
 declare module 'fastify' {
     interface FastifyRequest {
         userId?: mongoose.Types.ObjectId;
@@ -33,16 +33,16 @@ async function buildApp(): Promise<FastifyInstance> {
         trustProxy: true,
     });
 
-    // CORS
+
     await app.register(fastifyCors, {
         origin: true,
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'X-User-Id'],
     });
 
-    // Rate limiting (increased for load testing)
+
     await app.register(fastifyRateLimit, {
-        max: 1000, // 1000 requests per minute per IP
+        max: 10000,
         timeWindow: '1 minute',
         errorResponseBuilder: () => ({
             success: false,
@@ -50,38 +50,38 @@ async function buildApp(): Promise<FastifyInstance> {
         }),
     });
 
-    // Stricter rate limit for bid endpoint (increased for load testing)
+
     app.addHook('onRoute', (routeOptions) => {
         if (routeOptions.url === '/api/auctions/:id/bid' && routeOptions.method === 'POST') {
             routeOptions.config = {
                 ...routeOptions.config,
                 rateLimit: {
-                    max: 500, // 500 bids per minute per IP
+                    max: 5000,
                     timeWindow: '1 minute',
                 },
             };
         }
     });
 
-    // Static files
+
     await app.register(fastifyStatic, {
         root: path.join(__dirname, '../public'),
         prefix: '/',
     });
 
-    // Health check
+
     app.get('/api/health', async () => ({
         success: true,
         timestamp: new Date().toISOString(),
         uptime: process.uptime(),
     }));
 
-    // Register API routes
+
     await registerRoutes(app);
 
-    // SPA fallback - but not for socket.io paths
+
     app.setNotFoundHandler(async (request, reply) => {
-        // Don't serve index.html for socket.io requests
+
         if (request.url.startsWith('/socket.io')) {
             return reply.status(404).send({ error: 'Not found' });
         }
@@ -94,11 +94,11 @@ async function buildApp(): Promise<FastifyInstance> {
         });
     });
 
-    // Error handler
+
     app.setErrorHandler((error, request, reply) => {
         request.log.error(error);
 
-        // Zod validation errors
+
         if (error.validation) {
             return reply.status(400).send({
                 success: false,
@@ -107,7 +107,7 @@ async function buildApp(): Promise<FastifyInstance> {
             });
         }
 
-        // Rate limit errors
+
         if (error.statusCode === 429) {
             return reply.status(429).send({
                 success: false,
@@ -115,7 +115,7 @@ async function buildApp(): Promise<FastifyInstance> {
             });
         }
 
-        // Known errors
+
         const statusCode = error.statusCode || 500;
         return reply.status(statusCode).send({
             success: false,
@@ -129,7 +129,7 @@ async function buildApp(): Promise<FastifyInstance> {
 async function schedulePendingAuctions(): Promise<void> {
     const now = new Date();
 
-    // Schedule future auctions
+
     const futureAuctions = await Auction.find({
         status: 'pending',
         startAt: { $gt: now },
@@ -141,7 +141,7 @@ async function schedulePendingAuctions(): Promise<void> {
 
     console.log(`Scheduled ${futureAuctions.length} future auctions`);
 
-    // Start overdue auctions immediately
+
     await startOverdueAuctions();
 }
 
@@ -166,9 +166,9 @@ async function startOverdueAuctions(): Promise<void> {
     }
 }
 
-// Fallback polling - only for auctions (rounds are handled by Bull Queue only)
+
 function startAuctionPolling(): void {
-    // Auction polling - every 5 seconds
+
     setInterval(async () => {
         try {
             await startOverdueAuctions();
@@ -177,30 +177,29 @@ function startAuctionPolling(): void {
         }
     }, 5000);
 
-    // NOTE: Round polling REMOVED to avoid conflicts with Bull Queue
-    // Rounds are ONLY processed by Bull Queue to prevent write conflicts
+
 
     console.log('Auction polling started (5s)');
 }
 
 async function start(): Promise<void> {
     try {
-        // Connect to MongoDB
+
         await connectDatabase();
 
-        // Initialize Bull queues
+
         initializeQueues();
 
-        // Build Fastify app
+
         const app = await buildApp();
 
-        // Start Fastify server first
+
         await app.listen({
             port: config.port,
             host: '0.0.0.0',
         });
 
-        // Now initialize Socket.io on Fastify's server
+
         const io = new SocketServer(app.server, {
             cors: {
                 origin: '*',
@@ -210,21 +209,21 @@ async function start(): Promise<void> {
             pingInterval: 25000,
         });
 
-        // Initialize WebSocket handlers
+
         initializeWebSocketWithServer(io);
 
-        // Schedule pending auctions
+
         await schedulePendingAuctions();
 
-        // Start fallback polling for auctions
+
         startAuctionPolling();
 
-        console.log(`🚀 Server running on http://localhost:${config.port}`);
-        console.log(`📱 For mobile access use: http://<your-ip>:${config.port}`);
-        console.log(`🔌 WebSocket enabled`);
-        console.log(`📊 Bull Queue processing enabled`);
+        console.log(` Server running on http://localhost:${config.port}`);
+        console.log(` For mobile access use: http://<your-ip>:${config.port}`);
+        console.log(` WebSocket enabled`);
+        console.log(` Bull Queue processing enabled`);
 
-        // Graceful shutdown
+
         const shutdown = async (signal: string) => {
             console.log(`\n${signal} received. Shutting down gracefully...`);
 
