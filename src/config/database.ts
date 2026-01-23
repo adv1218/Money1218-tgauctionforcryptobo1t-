@@ -7,7 +7,7 @@ export async function connectDatabase(): Promise<void> {
         maxPoolSize: 50, // Maximum number of connections in pool
         minPoolSize: 10, // Minimum connections to keep open
         maxIdleTimeMS: 30000, // Close idle connections after 30s
-        serverSelectionTimeoutMS: 5000, // Timeout for server selection
+        serverSelectionTimeoutMS: 30000, // Timeout for server selection (30s for Replica Set init)
         socketTimeoutMS: 45000, // Close sockets after 45s of inactivity
         retryWrites: true,
         retryReads: true,

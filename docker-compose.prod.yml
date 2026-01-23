@@ -15,8 +15,10 @@ services:
       - MONGODB_URI=mongodb://mongo:27017/crypto-auction?replicaSet=rs0
       - REDIS_URL=redis://redis:6379
     depends_on:
-      - mongo
-      - redis
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - auction-network
     volumes:
@@ -47,13 +49,14 @@ services:
   mongo-init:
     image: mongo:7.0
     depends_on:
-      - mongo
+      mongo:
+        condition: service_healthy
     networks:
       - auction-network
     restart: "no"
     entrypoint: >
       bash -c "
-        sleep 10 &&
+        sleep 20 &&
         mongosh --host mongo:27017 --eval '
           rs.status().ok || rs.initiate({
             _id: \"rs0\",
