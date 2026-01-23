@@ -738,7 +738,22 @@ async function createAuction(e) {
     form.reset();
     alert(startNow ? 'Аукцион создан и запустится через 5 секунд!' : 'Аукцион создан');
     showPage('auctions');
-    loadAuctions();
+
+    // If startNow, switch to active tab after a short delay for the auction to start
+    if (startNow) {
+      state.currentTab = 'active';
+      $$('.tab').forEach(t => t.classList.remove('active'));
+      const activeTab = $(`.tab[data-tab="active"]`);
+      if (activeTab) activeTab.classList.add('active');
+      // Wait for auction to actually start before loading
+      setTimeout(() => loadAuctions(), 6000);
+    } else {
+      state.currentTab = 'pending';
+      $$('.tab').forEach(t => t.classList.remove('active'));
+      const pendingTab = $(`.tab[data-tab="pending"]`);
+      if (pendingTab) pendingTab.classList.add('active');
+      loadAuctions();
+    }
   } catch (err) {
     alert(err.message);
   }
