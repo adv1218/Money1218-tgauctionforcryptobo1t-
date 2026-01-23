@@ -1,5 +1,5 @@
 /**
- * Concurrent Load Test - 50 simultaneous bids from 50 users
+ * Concurrent Load Test - 200 simultaneous bids from 200 users
  * Tests system under high concurrent load
  */
 
@@ -86,10 +86,9 @@ async function createAuction(): Promise<string> {
     const auction = await api('/auctions', {
         method: 'POST',
         body: JSON.stringify({
-            name: 'Concurrent Load Test',
-            totalItems: 30, // Reduced for 50 users
-            totalRounds: 5,
-            winnersPerRound: 5,
+            totalItems: 100, // For 200 users test
+            totalRounds: 10,
+            winnersPerRound: 10,
             startAt: startAt.toISOString(),
             firstRoundDuration: 60000, // 1 minute
             otherRoundDuration: 30000,
@@ -186,10 +185,10 @@ async function getStats(auctionId: string): Promise<void> {
 
 async function main() {
     console.log('═══════════════════════════════════════════');
-    console.log('  CONCURRENT LOAD TEST - 50 Simultaneous Bids');
+    console.log('  CONCURRENT LOAD TEST - 200 Simultaneous Bids');
     console.log('═══════════════════════════════════════════\n');
 
-    const USER_COUNT = 50;
+    const USER_COUNT = 200;
 
     try {
         // Step 1: Create users

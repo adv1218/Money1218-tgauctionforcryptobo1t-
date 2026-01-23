@@ -52,8 +52,14 @@
           <input type="number" name="firstRoundMinutes" placeholder="Первый раунд (минуты, по умолч. 20)" class="input">
           <input type="number" name="otherRoundMinutes" placeholder="Остальные раунды (минуты, по умолч. 3)"
             class="input">
-          <input type="datetime-local" name="startAt" class="input" required>
-          <button type="submit" class="btn btn-primary">Создать</button>
+          <div class="checkbox-row">
+            <input type="checkbox" id="startNow" name="startNow">
+            <label for="startNow">🚀 Запустить сразу</label>
+          </div>
+          <input type="datetime-local" name="startAt" id="startAtInput" class="input">
+          <div class="btn-group">
+            <button type="submit" class="btn btn-primary">Создать</button>
+          </div>
         </form>
       </div>
 

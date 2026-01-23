@@ -691,12 +691,29 @@ async function createAuction(e) {
   const winnersPerRound = parseInt(formData.get('winnersPerRound'), 10);
   const minBid = parseInt(formData.get('minBid'), 10);
 
+  // Check if "Start Now" checkbox is checked
+  const startNowCheckbox = document.getElementById('startNow');
+  const startNow = startNowCheckbox && startNowCheckbox.checked;
+
+  // If startNow, set startAt to 5 seconds from now
+  let startAt;
+  if (startNow) {
+    startAt = new Date(Date.now() + 5000).toISOString();
+  } else {
+    const dateValue = formData.get('startAt');
+    if (!dateValue) {
+      alert('Выберите дату старта или поставьте галочку "Запустить сразу"');
+      return;
+    }
+    startAt = new Date(dateValue).toISOString();
+  }
+
   const payload = {
     name: formData.get('name'),
     description: formData.get('description'),
     totalItems: parseInt(formData.get('totalItems'), 10),
     totalRounds: parseInt(formData.get('totalRounds'), 10),
-    startAt: new Date(formData.get('startAt')).toISOString(),
+    startAt: startAt,
   };
 
   if (winnersPerRound > 0) {
@@ -719,7 +736,7 @@ async function createAuction(e) {
     });
 
     form.reset();
-    alert('Аукцион создан');
+    alert(startNow ? 'Аукцион создан и запустится через 5 секунд!' : 'Аукцион создан');
     showPage('auctions');
     loadAuctions();
   } catch (err) {

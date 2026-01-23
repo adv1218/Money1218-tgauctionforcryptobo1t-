@@ -1115,3 +1115,39 @@ textarea.input {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.3);
 }
+
+/* ===== CHECKBOX ROW ===== */
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  margin-bottom: 12px;
+  cursor: pointer;
+}
+
+.checkbox-row input[type="checkbox"] {
+  width: 24px;
+  height: 24px;
+  accent-color: var(--tg-green);
+  cursor: pointer;
+}
+
+.checkbox-row label {
+  font-size: 1rem;
+  cursor: pointer;
+  flex: 1;
+}
+
+.btn-group {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.btn-group .btn {
+  flex: 1;
+}
