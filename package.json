@@ -11,6 +11,7 @@
         "dev": "tsx watch src/app.ts",
         "build": "tsc && ls -R",
         "start": "node ./dist/app.js",
+        "start:cluster": "node ./dist/cluster.js",
         "test": "vitest",
         "test:load": "tsx tests/load/runner.ts",
         "test:single": "tsx tests/load/runner-single.ts",
