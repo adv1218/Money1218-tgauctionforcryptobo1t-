@@ -13,26 +13,40 @@ interface BidResult {
     times: number[];
 }
 
-async function loadTestApi(endpoint: string, options: RequestInit = {}): Promise<any> {
-    const response = await fetch(`${LOAD_TEST_API_BASE}${endpoint}`, {
-        ...options,
-        headers: {
-            'Content-Type': 'application/json',
-            ...options.headers,
-        },
-    });
-    const data = await response.json();
-    if (!data.success) {
-        throw new Error(data.error || 'API error');
+async function loadTestApi(endpoint: string, options: RequestInit = {}, retries = 3): Promise<any> {
+    for (let attempt = 1; attempt <= retries; attempt++) {
+        try {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 30000); // 30s timeout
+
+            const response = await fetch(`${LOAD_TEST_API_BASE}${endpoint}`, {
+                ...options,
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...options.headers,
+                },
+                signal: controller.signal,
+            });
+            clearTimeout(timeout);
+
+            const data = await response.json();
+            if (!data.success) {
+                throw new Error(data.error || 'API error');
+            }
+            return data.data;
+        } catch (error: any) {
+            if (attempt === retries) throw error;
+
+            await new Promise(r => setTimeout(r, attempt * 500));
+        }
     }
-    return data.data;
 }
 
 async function createLoadTestUsers(count: number): Promise<LoadTestUser[]> {
     console.log(`Creating ${count} users...`);
     const users: LoadTestUser[] = [];
 
-    const batchSize = 10;
+    const batchSize = 50;
     for (let i = 0; i < count; i += batchSize) {
         const batch = Math.min(batchSize, count - i);
         const promises = [];
@@ -61,7 +75,7 @@ async function createLoadTestUsers(count: number): Promise<LoadTestUser[]> {
 async function depositToLoadTestUsers(users: LoadTestUser[]): Promise<void> {
     console.log(`Depositing 10000 stars to ${users.length} users...`);
 
-    const batchSize = 10;
+    const batchSize = 50; // Deposit to 50 users at a time
     let completed = 0;
 
     for (let i = 0; i < users.length; i += batchSize) {
@@ -181,11 +195,11 @@ async function getLoadTestStats(auctionId: string): Promise<void> {
 
 async function runLoadTest(): Promise<void> {
     console.log('═══════════════════════════════════════════');
-    console.log('  CONCURRENT LOAD TEST - 200 Simultaneous Bids');
+    console.log('  CONCURRENT LOAD TEST - 500 Simultaneous Bids');
     console.log('═══════════════════════════════════════════\n');
     console.log(`  Target: ${LOAD_TEST_API_BASE}\n`);
 
-    const USER_COUNT = 200;
+    const USER_COUNT = 500;
 
     try {
         // Step 1: Create users
